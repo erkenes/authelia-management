@@ -2,6 +2,7 @@ package main
 
 import (
 	"authelia-users/helper/basics"
+	"authelia-users/helper/configuration"
 	"authelia-users/helper/user"
 	"fmt"
 )
@@ -26,6 +27,10 @@ func home() {
 	fmt.Println("3: Add a group to a user")
 	fmt.Println("4: Remove a group from a user")
 
+	basics.PrintSectionHeader("Domain-Management")
+	fmt.Println("5: Has access rule for a domain")
+	fmt.Println("6: Add new access rule for a domain")
+
 	inputMenu := basics.GetNumberInput("", true)
 
 	switch inputMenu {
@@ -40,6 +45,12 @@ func home() {
 		break
 	case 4:
 		openRemoveGroupFromUser()
+		break
+	case 5:
+		openHasAccessRule()
+		break
+	case 6:
+		openAddAccessControlRule()
 		break
 	}
 
@@ -122,4 +133,59 @@ func openRemoveGroupFromUser() {
 	} else {
 		fmt.Printf(basics.ColorRed + "The user `" + username + "` can not be found!" + basics.ColorReset)
 	}
+}
+
+func openHasAccessRule() {
+	domain := basics.GetTextInput("What is the domain?", true)
+
+	if configuration.HasAccessRuleForDomain(domain) {
+		fmt.Printf(basics.ColorGreen + "Found." + basics.ColorReset)
+	} else {
+		fmt.Printf(basics.ColorYellow + "Not found." + basics.ColorReset)
+	}
+}
+
+func openAddAccessControlRule() {
+	domains := askForDomain()
+	policy := "bypass"
+
+	if basics.GetConfirmInput("Should the domain be secured?") {
+		policy = "one_factor"
+		if basics.GetConfirmInput("Should the domain be secured with two factor auth?") {
+			policy = "two_factor"
+		}
+	}
+
+	subjects := askForGroups()
+	resources := askForResources()
+
+	configuration.AddAccessRuleForDomain(domains, policy, subjects, resources)
+}
+
+func askForDomain() []string {
+	var domains []string
+	domain := basics.GetTextInput("Which domain should be added? Leave empty to continue.", false)
+	if domain != "" {
+		domains = append(domains, domain)
+		domains = append(domains, askForDomain()...)
+	} else {
+		fmt.Printf(basics.ColorYellow + "Skipped..." + basics.ColorReset)
+	}
+
+	return domains
+
+}
+
+func askForResources() []string {
+	var resources []string
+	resource := basics.GetTextInput("Which resources should be added? Leave empty to continue.", false)
+	if resource != "" {
+		resources = append(resources, resource)
+		resources = append(resources, askForResources()...)
+	} else {
+		fmt.Printf(basics.ColorYellow + "Skipped..." + basics.ColorReset)
+	}
+
+	return resources
+
 }
